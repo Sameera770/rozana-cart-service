@@ -5,6 +5,8 @@ from fastapi import HTTPException
 
 # Services
 from app.cart.service import CartService
+from app.repository.promotions import PromotionsRepository
+from app.config.settings import OMSConfigs
 
 # DTOs
 from app.dto.cart import (PromotionListRequest, PromotionListResponse,
@@ -14,6 +16,7 @@ from app.dto.cart import (PromotionListRequest, PromotionListResponse,
 # Logging
 from app.logging.utils import get_app_logger
 logger = get_app_logger("app.core.cart_functions")
+configs = OMSConfigs()
 
 
 async def get_available_promotions_core(request: PromotionListRequest, channel: str) -> List[PromotionListResponse]:
@@ -162,3 +165,32 @@ async def calculate_cart_discount_core(request: CartDiscountRequest, channel: st
             status_code=500,
             detail={"error_code": "INTERNAL_ERROR", "message": "Failed to calculate discount"}
         )
+
+
+async def get_available_payment_methods_core(user_id: str) -> List[str]:
+    """
+    Determine available payment methods based on RTO + full/partial return counts.
+    COD allowed only when all three are within ranges.
+    """
+    try:
+        base_methods = ["cod", "wallet", "payment_gateway"]
+        repository = PromotionsRepository()
+
+        rto_count = await repository.get_rto_count_for_user(user_id)
+        full_count = await repository.get_full_return_count_for_user(user_id)
+        partial_count = await repository.get_partial_return_count_for_user(user_id)
+
+        cod_blocked = (rto_count > configs.COD_DISABLE_RTO_THRESHOLD or full_count > configs.COD_DISABLE_FULL_RETURN_THRESHOLD or partial_count > configs.COD_DISABLE_PARTIAL_RETURN_THRESHOLD)
+
+        if cod_blocked and "cod" in base_methods:
+            base_methods.remove("cod")
+            logger.info(f"cod_disabled | user_id={user_id} | rto={rto_count}/{configs.COD_DISABLE_RTO_THRESHOLD} | full={full_count}/{configs.COD_DISABLE_FULL_RETURN_THRESHOLD} | partial={partial_count}/{configs.COD_DISABLE_PARTIAL_RETURN_THRESHOLD} | methods={base_methods}")
+            return base_methods
+
+        logger.info(f"cod_enabled | user_id={user_id} | rto={rto_count}/{configs.COD_DISABLE_RTO_THRESHOLD} | full={full_count}/{configs.COD_DISABLE_FULL_RETURN_THRESHOLD} | partial={partial_count}/{configs.COD_DISABLE_PARTIAL_RETURN_THRESHOLD} | methods={base_methods}")
+        return base_methods
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"get_available_payment_methods_core_error | error={e}", exc_info=True)
+        raise HTTPException(status_code=500, detail={"error_code": "INTERNAL_ERROR", "message": "Failed to fetch payment methods"})

@@ -32,7 +32,9 @@ class OMSConfigs:
         self.PRICE_CHECK_ENABLED = os.getenv("PRICE_CHECK_ENABLED", "true").lower() == "true"
 
         # RTO threshold to disable COD (app channel only)
-        self.COD_DISABLE_RTO_THRESHOLD = int(os.getenv("COD_DISABLE_RTO_THRESHOLD"))
+        self.COD_DISABLE_RTO_THRESHOLD = int(os.getenv("COD_DISABLE_RTO_THRESHOLD", "5"))
+        self.COD_DISABLE_FULL_RETURN_THRESHOLD = int(os.getenv("COD_DISABLE_FULL_RETURN_THRESHOLD", "5"))
+        self.COD_DISABLE_PARTIAL_RETURN_THRESHOLD = int(os.getenv("COD_DISABLE_PARTIAL_RETURN_THRESHOLD", "5"))
 
         # Typesense settings
         self.TYPESENSE_HOST = os.getenv("TYPESENSE_HOST", "localhost")

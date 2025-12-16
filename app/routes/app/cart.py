@@ -6,11 +6,15 @@ from pydantic import BaseModel
 from app.core.cart_functions import (
     get_available_promotions_core,
     calculate_cart_discount_core,
+    get_available_payment_methods_core,
 )
-from app.repository.promotions import get_available_payment_methods_core
-
-# DTOs
-from app.dto.cart import PromotionListRequest, PromotionListResponse, CartDiscountRequest, CartDiscountResponse, PaymentMethodsRequest
+from app.dto.cart import (
+    PromotionListRequest,
+    PromotionListResponse,
+    CartDiscountRequest,
+    CartDiscountResponse,
+    PaymentMethodsRequest,
+)
 
 app_router = APIRouter(prefix="/cart", tags=["app-cart"])
 

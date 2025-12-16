@@ -111,23 +111,23 @@ class PromotionsRepository:
             logger.error(f"get_rto_count_for_user_error | user_id={user_id} error={e}", exc_info=True)
             raise
 
+    async def get_full_return_count_for_user(self, user_id: str) -> int:
+        try:
+            query = "SELECT COUNT(*) as count FROM returns WHERE customer_id = :user_id AND return_type = 'full'"
+            rows = execute_raw_sql_readonly(query, {"user_id": user_id})
+            logger.info(f"get_full_return_count_for_user_result | user_id={user_id} count={rows}")
+            return rows[0].get("count", 0) if rows else 0
+        except Exception as e:
+            logger.error(f"get_full_return_count_for_user_error | user_id={user_id} error={e}", exc_info=True)
+            raise
 
-async def get_available_payment_methods_core(user_id: str) -> List[str]:
-    """
-    Determine available payment methods based only on user's RTO history.
-    Removes COD if RTO count exceeds threshold.
-    """
-    base_methods = ["cod", "wallet", "payment_gateway"]
-    threshold = configs.COD_DISABLE_RTO_THRESHOLD
-    repo = PromotionsRepository()
-    rto_count = await repo.get_rto_count_for_user(user_id)
-
-    if rto_count > threshold:
-        if "cod" in base_methods:
-            base_methods.remove("cod")
-        logger.info(f"rto_cod_disabled | user_id={user_id} | rto_count={rto_count} | threshold={threshold} | methods={base_methods}")
-        return base_methods
-
-    logger.info(f"rto_cod_enabled | user_id={user_id} | rto_count={rto_count} | threshold={threshold} | methods={base_methods}")
-    return base_methods
+    async def get_partial_return_count_for_user(self, user_id: str) -> int:
+        try:
+            query = "SELECT COUNT(*) as count FROM returns WHERE customer_id = :user_id AND return_type = 'partial'"
+            rows = execute_raw_sql_readonly(query, {"user_id": user_id})
+            logger.info(f"get_partial_return_count_for_user_result | user_id={user_id} count={rows}")
+            return rows[0].get("count", 0) if rows else 0
+        except Exception as e:
+            logger.error(f"get_partial_return_count_for_user_error | user_id={user_id} error={e}", exc_info=True)
+            raise
 
