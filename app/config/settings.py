@@ -36,6 +36,9 @@ class OMSConfigs:
         self.COD_DISABLE_FULL_RETURN_THRESHOLD = int(os.getenv("COD_DISABLE_FULL_RETURN_THRESHOLD", "5"))
         self.COD_DISABLE_PARTIAL_RETURN_THRESHOLD = int(os.getenv("COD_DISABLE_PARTIAL_RETURN_THRESHOLD", "5"))
 
+        # Cart value threshold to disable COD (app channel only)
+        self.COD_DISABLE_CART_VALUE_THRESHOLD = int(os.getenv("COD_DISABLE_CART_VALUE_THRESHOLD", "3000"))
+
         # Typesense settings
         self.TYPESENSE_HOST = os.getenv("TYPESENSE_HOST", "localhost")
         self.TYPESENSE_PORT = os.getenv("TYPESENSE_PORT", "8108")

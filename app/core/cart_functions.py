@@ -10,7 +10,7 @@ from app.config.settings import OMSConfigs
 
 # DTOs
 from app.dto.cart import (PromotionListRequest, PromotionListResponse,
-    CartDiscountRequest, CartDiscountResponse, CartItemResponse
+    CartDiscountRequest, CartDiscountResponse, CartItemResponse, PaymentMethodsRequest
 )
 
 # Logging
@@ -167,27 +167,39 @@ async def calculate_cart_discount_core(request: CartDiscountRequest, channel: st
         )
 
 
-async def get_available_payment_methods_core(user_id: str) -> List[str]:
+async def get_available_payment_methods_core(request: PaymentMethodsRequest) -> List[str]:
     """
-    Determine available payment methods based on RTO + full/partial return counts.
-    COD allowed only when all three are within ranges.
+    Determine available payment methods based on:
+    1) Return counts (RTO/full/partial)
+    2) Cart value threshold
+    COD allowed only when all checks pass.
     """
     try:
         base_methods = ["cod", "wallet", "payment_gateway"]
         repository = PromotionsRepository()
 
-        rto_count = await repository.get_rto_count_for_user(user_id)
-        full_count = await repository.get_full_return_count_for_user(user_id)
-        partial_count = await repository.get_partial_return_count_for_user(user_id)
+        # Return-based checks
+        rto_count = await repository.get_rto_count_for_user(request.user_id)
+        full_count = await repository.get_full_return_count_for_user(request.user_id)
+        partial_count = await repository.get_partial_return_count_for_user(request.user_id)
 
-        cod_blocked = (rto_count > configs.COD_DISABLE_RTO_THRESHOLD or full_count > configs.COD_DISABLE_FULL_RETURN_THRESHOLD or partial_count > configs.COD_DISABLE_PARTIAL_RETURN_THRESHOLD)
+        cod_blocked_return = (rto_count > configs.COD_DISABLE_RTO_THRESHOLD or full_count > configs.COD_DISABLE_FULL_RETURN_THRESHOLD or partial_count > configs.COD_DISABLE_PARTIAL_RETURN_THRESHOLD)
+
+        # Cart value check (0 disables the check)
+        cod_blocked_cart = False
+        if configs.COD_DISABLE_CART_VALUE_THRESHOLD > 0:
+            cart_threshold = Decimal(str(configs.COD_DISABLE_CART_VALUE_THRESHOLD))
+            cart_total = request.cart_value or Decimal("0")
+            cod_blocked_cart = cart_total > cart_threshold
+
+        cod_blocked = cod_blocked_return or cod_blocked_cart
 
         if cod_blocked and "cod" in base_methods:
             base_methods.remove("cod")
-            logger.info(f"cod_disabled | user_id={user_id} | rto={rto_count}/{configs.COD_DISABLE_RTO_THRESHOLD} | full={full_count}/{configs.COD_DISABLE_FULL_RETURN_THRESHOLD} | partial={partial_count}/{configs.COD_DISABLE_PARTIAL_RETURN_THRESHOLD} | methods={base_methods}")
+            logger.info(f"cod_disabled | user_id={request.user_id} | rto={rto_count}/{configs.COD_DISABLE_RTO_THRESHOLD} | full={full_count}/{configs.COD_DISABLE_FULL_RETURN_THRESHOLD} | partial={partial_count}/{configs.COD_DISABLE_PARTIAL_RETURN_THRESHOLD} | cart_value={request.cart_value} threshold={configs.COD_DISABLE_CART_VALUE_THRESHOLD} | methods={base_methods}")
             return base_methods
 
-        logger.info(f"cod_enabled | user_id={user_id} | rto={rto_count}/{configs.COD_DISABLE_RTO_THRESHOLD} | full={full_count}/{configs.COD_DISABLE_FULL_RETURN_THRESHOLD} | partial={partial_count}/{configs.COD_DISABLE_PARTIAL_RETURN_THRESHOLD} | methods={base_methods}")
+        logger.info(f"cod_enabled | user_id={request.user_id} | rto={rto_count}/{configs.COD_DISABLE_RTO_THRESHOLD} | full={full_count}/{configs.COD_DISABLE_FULL_RETURN_THRESHOLD} | partial={partial_count}/{configs.COD_DISABLE_PARTIAL_RETURN_THRESHOLD} | cart_value={request.cart_value} threshold={configs.COD_DISABLE_CART_VALUE_THRESHOLD} | methods={base_methods}")
         return base_methods
     except HTTPException:
         raise

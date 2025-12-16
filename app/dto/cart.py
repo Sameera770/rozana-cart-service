@@ -87,3 +87,4 @@ class CartDiscountResponse(BaseModel):
 
 class PaymentMethodsRequest(BaseModel):
     user_id: str
+    cart_value: Decimal = Field(default=Decimal("0"), description="Cart total used for COD check")

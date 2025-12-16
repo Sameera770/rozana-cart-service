@@ -35,5 +35,5 @@ async def calculate_cart_discount(request: CartDiscountRequest):
 @app_router.post("/payment_methods/available", response_model=Dict[str, List[str]])
 async def get_available_payment_methods(request: PaymentMethodsRequest):
     """Return available payment methods for the given user."""
-    return {"available_payment_methods": await get_available_payment_methods_core(request.user_id)}
+    return {"available_payment_methods": await get_available_payment_methods_core(request)}
 
