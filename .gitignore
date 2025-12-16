@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+.env.*
+logs/
+*.log
+*.log.*
+
+app/auth/firebase_app.json
+app/auth/firebase_pos.json
